@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="C:\Sound\javascript roadmap\train.css">
+  <title>Document</title>
+</head>
+<body>
+
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Outfit:wght@400;500;600&display=swap");
+
+/* ============================================================
+   CINEMATIC QUIZ
+   Idea: the quiz is a film playing on a cinema screen.
+   - Letterbox bars slide open once when the page loads
+   - Warm projector light from the top, teal bounce from the corner
+   - Film grain + vignette over everything
+   - Questions are set like title cards (serif), the UI is quiet (sans)
+   Palette: ink black, deep teal, ivory text, tungsten amber (accent),
+            film teal (correct), curtain crimson (wrong)
+   ============================================================ */
+
+:root {
+  --ink: #05080b;
+  --deep: #0b161b;
+  --ivory: #f3ead8;
+  --dim: #8f9c9d;
+  --amber: #eeb35a;
+  --amber-deep: #c98a2b;
+  --teal: #3fb6a8;
+  --crimson: #d4453a;
+
+  --bar: clamp(26px, 7vh, 76px);
+  --display: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --ui: "Outfit", "Segoe UI", system-ui, sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+::selection {
+  background: var(--amber);
+  color: var(--ink);
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--bar) + 20px) 20px;
+  font-family: var(--ui);
+  color: var(--ivory);
+  background:
+    radial-gradient(60% 45% at 50% 0%, rgba(238, 179, 90, 0.22), transparent 70%),
+    radial-gradient(80% 60% at 90% 110%, rgba(63, 182, 168, 0.14), transparent 70%),
+    linear-gradient(180deg, var(--deep), var(--ink));
+  background-attachment: fixed;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ---------- Film layers: grain, vignette, letterbox ---------- */
+
+html::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0.07;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+html::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
+}
+
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  height: var(--bar);
+  background: #000;
+  animation: curtain 1.8s cubic-bezier(0.65, 0, 0.35, 1) 0.15s both;
+}
+
+body::before {
+  top: 0;
+  box-shadow: 0 1px 0 rgba(238, 179, 90, 0.18);
+}
+
+body::after {
+  bottom: 0;
+  box-shadow: 0 -1px 0 rgba(238, 179, 90, 0.18);
+}
+
+@keyframes curtain {
+  from {
+    height: 50vh;
+  }
+  to {
+    height: var(--bar);
+  }
+}
+
+/* ---------- Screen ---------- */
+
+.quiz {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  padding: 36px 34px 34px;
+  background: linear-gradient(180deg, rgba(16, 32, 39, 0.78), rgba(7, 13, 17, 0.88));
+  border: 1px solid rgba(238, 179, 90, 0.22);
+  border-radius: 6px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.7),
+    0 30px 80px rgba(0, 0, 0, 0.65),
+    0 0 140px rgba(238, 179, 90, 0.08);
+  animation: fade-in 1.4s ease 0.7s both;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ---------- Header ---------- */
+
+.quiz-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px 20px;
+  font-size: 0.92rem;
+  letter-spacing: 0.02em;
+  color: var(--dim);
+}
+
+#question-number {
+  white-space: nowrap;
+}
+
+#score-display {
+  color: var(--amber);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.timer {
+  min-width: 5.5ch;
+  padding: 6px 16px;
+  text-align: center;
+  white-space: nowrap;
+  font-family: var(--ui);
+  font-weight: 600;
+  font-size: clamp(18px, 4vw, 30px);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--amber);
+  background: rgba(238, 179, 90, 0.08);
+  border: 1px solid rgba(238, 179, 90, 0.35);
+  border-radius: 999px;
+  box-shadow: 0 0 18px rgba(238, 179, 90, 0.12);
+}
+
+/* ---------- Progress ---------- */
+
+.progress {
+  width: 100%;
+  height: 3px;
+  margin: 14px 0 32px;
+  background: rgba(243, 234, 216, 0.1);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--amber-deep), var(--amber));
+  box-shadow: 0 0 14px rgba(238, 179, 90, 0.75);
+  border-radius: 999px;
+  transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ---------- Question (the title card) ---------- */
+
+#question-text {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(1.65rem, 5.2vw, 2.25rem);
+  line-height: 1.2;
+  letter-spacing: -0.005em;
+  color: var(--ivory);
+  text-wrap: balance;
+  margin-bottom: 28px;
+}
+
+/* ---------- Options ---------- */
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  counter-reset: choice;
+}
+
+.option {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 15px 18px;
+  text-align: left;
+  font-family: var(--ui);
+  font-size: 1rem;
+  line-height: 1.35;
+  color: var(--ivory);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(243, 234, 216, 0.14);
+  border-radius: 4px;
+  cursor: pointer;
+  transition:
+    background 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    opacity 0.35s ease,
+    transform 0.2s ease;
+}
+
+.option::before {
+  counter-increment: choice;
+  content: counter(choice, upper-alpha);
+  flex: none;
+  width: 1.5rem;
+  font-family: var(--display);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 1.35rem;
+  line-height: 1;
+  text-align: center;
+  color: var(--amber);
+  transition: color 0.25s ease;
+}
+
+.option:hover:not(.correct):not(.wrong) {
+  background: rgba(238, 179, 90, 0.08);
+  border-color: rgba(238, 179, 90, 0.55);
+  transform: translateX(5px);
+}
+
+.option:focus-visible,
+.action-btn:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 3px;
+}
+
+.option.correct {
+  background: rgba(63, 182, 168, 0.14);
+  border-color: var(--teal);
+  box-shadow: 0 0 28px rgba(63, 182, 168, 0.25);
+}
+
+.option.correct::before {
+  color: var(--teal);
+}
+
+.option.wrong {
+  background: rgba(212, 69, 58, 0.16);
+  border-color: var(--crimson);
+  box-shadow: 0 0 28px rgba(212, 69, 58, 0.22);
+}
+
+.option.wrong::before {
+  color: var(--crimson);
+}
+
+/* After answering, the unchosen options fall back into the dark */
+.options:has(.correct, .wrong) .option {
+  cursor: default;
+}
+
+.options:has(.correct, .wrong) .option:not(.correct):not(.wrong) {
+  opacity: 0.4;
+}
+
+/* ---------- Feedback (set like a subtitle) ---------- */
+
+.feedback {
+  min-height: 1.8em;
+  margin: 20px 0 22px;
+  text-align: center;
+  font-family: var(--display);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 1.45rem;
+  line-height: 1.2;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+}
+
+.feedback.correct {
+  color: var(--teal);
+}
+
+.feedback.wrong {
+  color: var(--crimson);
+}
+
+/* ---------- Buttons ---------- */
+
+.action-btn {
+  appearance: none;
+  width: 100%;
+  padding: 15px 20px;
+  font-family: var(--ui);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: #1a1206;
+  background: linear-gradient(180deg, #f2bd6a, var(--amber-deep));
+  border: 1px solid rgba(255, 220, 160, 0.4);
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow:
+    0 10px 28px rgba(238, 179, 90, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.25s ease,
+    filter 0.25s ease,
+    background 0.25s ease,
+    color 0.25s ease;
+}
+
+.action-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.07);
+  box-shadow:
+    0 14px 36px rgba(238, 179, 90, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.action-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.action-btn:disabled {
+  color: var(--dim);
+  background: transparent;
+  border-color: rgba(243, 234, 216, 0.14);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* ---------- Result screen (end credits) ---------- */
+
+#result-screen {
+  text-align: center;
+  padding: 8px 0 2px;
+}
+
+#result-screen:not(.hidden) {
+  animation: reveal 1s ease both;
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#result-screen h2 {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(2rem, 8vw, 2.9rem);
+  line-height: 1.1;
+  color: var(--ivory);
+  margin-bottom: 8px;
+}
+
+.final-score {
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: clamp(3.6rem, 18vw, 5rem);
+  line-height: 1.1;
+  color: var(--dim);
+  margin: 10px 0 6px;
+}
+
+#final-score {
+  color: var(--amber);
+  font-weight: 700;
+  text-shadow: 0 0 40px rgba(238, 179, 90, 0.45);
+}
+
+#total-questions {
+  font-size: 0.55em;
+}
+
+#result-message {
+  font-family: var(--display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 1.6rem;
+  line-height: 1.25;
+  color: var(--ivory);
+  margin-bottom: 30px;
+}
+
+/* ---------- Small screens ---------- */
+
+@media (max-width: 420px) {
+  body {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .quiz {
+    padding: 26px 20px 24px;
+  }
+
+  .quiz-header {
+    gap: 8px 12px;
+  }
+
+  .option {
+    padding: 13px 14px;
+    gap: 12px;
+  }
+}
+
+.highscore {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 6px 18px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 0.85rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: #e8a33d;
+  text-shadow: 0 0 10px rgba(232, 163, 61, 0.45);
+  border-top: 1px solid rgba(232, 163, 61, 0.45);
+  border-bottom: 1px solid rgba(45, 212, 191, 0.45);
+  background: linear-gradient(90deg, transparent, rgba(232, 163, 61, 0.08), transparent);
+}
+
+.highscore:empty {
+  display: none;
+}
+
+.pinakamataas {
+  display: inline-block;
+  margin: 14px 0 0;
+  padding: 8px 22px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1rem;
+  font-weight: bold;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #ffd27a;
+  text-shadow: 0 0 12px rgba(255, 190, 80, 0.8), 0 0 28px rgba(232, 163, 61, 0.5);
+  border: 1px solid rgba(255, 210, 122, 0.6);
+  background: linear-gradient(90deg, transparent, rgba(232, 163, 61, 0.15), transparent);
+  animation: pinakamataas-glow 2s ease-in-out infinite;
+}
+
+.pinakamataas:empty {
+  display: none;
+}
+
+@keyframes pinakamataas-glow {
+  0%, 100% {
+    opacity: 0.85;
+    box-shadow: 0 0 8px rgba(232, 163, 61, 0.25);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 22px rgba(232, 163, 61, 0.55);
+  }
+}
+
+#category-screen {
+  text-align: center;
+  padding: 32px 24px;
+}
+
+.category-title {
+  margin: 0 0 18px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.7rem;
+  font-weight: normal;
+  letter-spacing: 0.08em;
+  color: #e8a33d;
+  text-shadow: 0 0 14px rgba(232, 163, 61, 0.4);
+}
+
+.category-title::after {
+  content: "";
+  display: block;
+  width: 120px;
+  height: 1px;
+  margin: 14px auto 0;
+  background: linear-gradient(90deg, #e8a33d, #2dd4bf);
+}
+
+.category-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  max-width: 420px;
+  margin: 24px auto 0;
+}
+
+.category-btn {
+  padding: 16px 18px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.05rem;
+  letter-spacing: 0.06em;
+  color: #e8a33d;
+  background: rgba(232, 163, 61, 0.06);
+  border: 1px solid rgba(232, 163, 61, 0.45);
+  border-bottom-color: rgba(45, 212, 191, 0.5);
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+.category-btn[data-category="all"] {
+  grid-column: 1 / -1;
+}
+
+.category-btn:hover,
+.category-btn:focus-visible {
+  color: #2dd4bf;
+  background: rgba(45, 212, 191, 0.08);
+  border-color: rgba(45, 212, 191, 0.8);
+  box-shadow: 0 0 18px rgba(45, 212, 191, 0.3);
+  outline: none;
+}
+
+.category-btn:focus-visible {
+  outline: 2px solid #2dd4bf;
+  outline-offset: 3px;
+}
+
+@media (max-width: 380px) {
+  .category-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .category-btn {
+    transition: none;
+  }
+}
+
+/* ---------- Respect reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  body::before,
+  body::after,
+  .quiz,
+  #result-screen:not(.hidden) {
+    animation: none;
+  }
+
+  .progress-bar,
+  .option,
+  .action-btn {
+    transition: none;
+  }
+}
+  </style>
+
+   <main class="quiz">
+
+    <section id="category-screen">
+  <h2 class="category-title">Pumili ng Category</h2>
+  <div class="category-list">
+    <button class="category-btn" data-category="pilipinas">Pilipinas</button>
+    <button class="category-btn" data-category="agham">Agham</button>
+    <button class="category-btn" data-category="math">Math</button>
+    <button class="category-btn" data-category="general">General</button>
+    <button class="category-btn" data-category="all">All</button>
+  </div>
+</section>
+
+    <!-- QUIZ SCREEN -->
+    <section id="quiz-screen" class="hidden"><!--Tapos na-->
+      <header class="quiz-header">
+        <span id="question-number">Question 1 of 5</span><!--Tapos na-->
+        <span id="score-display">Score: 0</span><!--Tapos na-->
+        <span id="timer" class="timer">Time: 15</span>
+      </header>
+
+      <div class="progress">
+        <div id="progress-bar" class="progress-bar"></div><!--Tapos na-->
+      </div>
+
+      <h2 id="question-text">Question goes here</h2><!--Tapos na-->
+
+      <div id="options" class="options"></div><!--Tapos na-->
+
+      <p id="feedback" class="feedback"></p><!--Tapos na-->
+
+      <button id="next-btn" class="action-btn" disabled>Next</button><!--Tapos na-->
+    </section>
+
+    <!-- RESULT SCREEN -->
+    <section id="result-screen" class="hidden"><!--Tapos na-->
+      <p id="pinakamataas" class="pinakamataas"></p>
+      <p id="high-score" class="highscore"></p>
+      <h2>Quiz Complete!</h2>
+      <p class="final-score">
+        <span id="final-score">0</span><!--Tapos na--> / <span id="total-questions">0</span><!--Tapos na-->
+      </p>
+      <p id="result-message"></p><!--Tapos na-->
+      <button id="restart-btn" class="action-btn">Try Again</button><!--Tapos na-->
+    </section>
+
+  </main>
+
+  <script>
+    const allquestions = [
+  {
+    question: "Ano ang pambansang wika ng Pilipinas?",
+    options: ["Filipino", "Cebuano", "Ingles", "Ilokano"],
+    answer: 0,
+    category: "pilipinas"
+  },
+  {
+    question: "Ano ang tatlong pangunahing pangkat ng isla ng Pilipinas?",
+    options: ["Luzon, Palawan, Mindanao", "Visayas, Mindoro, Sulu", "Luzon, Visayas, Mindanao", "Luzon, Cebu, Davao"],
+    answer: 2,
+    category: "pilipinas"
+  },
+  {
+    question: "Ano ang pambansang bulaklak ng Pilipinas?",
+    options: ["Rosas", "Sampaguita", "Gumamela", "Orkidyas"],
+    answer: 1,
+    category: "pilipinas"
+  },
+  {
+    question: "Ano ang pambansang puno ng Pilipinas?",
+    options: ["Mangga", "Niyog", "Molave", "Narra"],
+    answer: 3,
+    category: "pilipinas"
+  },
+  {
+    question: "Sino ang unang pangulo ng Unang Republika ng Pilipinas?",
+    options: ["Manuel Quezon", "Sergio Osmeña", "Emilio Aguinaldo", "Jose P. Laurel"],
+    answer: 2,
+    category: "pilipinas"
+  },
+  {
+    question: "Anong taon ipinahayag ang kalayaan ng Pilipinas mula sa Espanya noong Hunyo 12?",
+    options: ["1898", "1896", "1946", "1935"],
+    answer: 0,
+    category: "pilipinas"
+  },
+  {
+    question: "Sino ang sumulat ng nobelang 'Noli Me Tangere'?",
+    options: ["Andres Bonifacio", "Marcelo H. del Pilar", "Graciano Lopez Jaena", "Jose Rizal"],
+    answer: 3,
+    category: "pilipinas"
+  },
+  {
+    question: "Ano ang pinakamalaking isla sa Pilipinas?",
+    options: ["Mindanao", "Luzon", "Samar", "Palawan"],
+    answer: 1,
+    category: "pilipinas"
+  },
+  {
+    question: "Ano ang kabisera ng Pilipinas?",
+    options: ["Quezon City", "Maynila", "Cebu City", "Davao City"],
+    answer: 1,
+    category: "pilipinas"
+  },
+  {
+    question: "Ano ang pinakamataas na bundok sa Pilipinas?",
+    options: ["Mount Pulag", "Mount Mayon", "Mount Pinatubo", "Mount Apo"],
+    answer: 3,
+    category: "pilipinas"
+  },
+  {
+    question: "Ano ang pinakamalaking karagatan sa mundo?",
+    options: ["Pasipiko", "Atlantiko", "Indian", "Arctic"],
+    answer: 0,
+    category: "general"
+  },
+  {
+    question: "Ilang kontinente mayroon sa mundo?",
+    options: ["5", "6", "7", "8"],
+    answer: 2,
+    category: "general"
+  },
+  {
+    question: "Ano ang pinakamalaking bansa sa mundo ayon sa lawak?",
+    options: ["Canada", "China", "Estados Unidos", "Russia"],
+    answer: 3,
+    category: "general"
+  },
+  {
+    question: "Ano ang kabisera ng France?",
+    options: ["Lyon", "Paris", "Marseille", "Nice"],
+    answer: 1,
+    category: "general"
+  },
+  {
+    question: "Ano ang pinakamalaking hayop sa mundo?",
+    options: ["Elepante", "Pating", "Asul na balyena", "Giraffe"],
+    answer: 2,
+    category: "agham"
+  },
+  {
+    question: "Ilang gilid mayroon ang isang heksagon?",
+    options: ["6", "5", "7", "8"],
+    answer: 0,
+    category: "math"
+  },
+  {
+    question: "Ano ang chemical formula ng tubig?",
+    options: ["H2O", "CO2", "O2", "HO"],
+    answer: 0,
+    category: "agham"
+  },
+  {
+    question: "Anong gas ang kailangan ng tao para huminga?",
+    options: ["Nitrogen", "Hydrogen", "Oxygen", "Carbon dioxide"],
+    answer: 2,
+    category: "agham"
+  },
+  {
+    question: "Ano ang pinakamalapit na planeta sa Araw?",
+    options: ["Venus", "Mercury", "Earth", "Mars"],
+    answer: 1,
+    category: "agham"
+  },
+  {
+    question: "Aling planeta ang kilala sa kanyang malalaking singsing?",
+    options: ["Jupiter", "Uranus", "Neptune", "Saturn"],
+    answer: 3,
+    category: "agham"
+  },
+  {
+    question: "Ilang ngipin karaniwan ang mayroon ang isang nasa hustong gulang na tao?",
+    options: ["28", "30", "32", "36"],
+    answer: 2,
+    category: "agham"
+  },
+  {
+    question: "Anong bahagi ng katawan ang nagpapadaloy ng dugo sa buong katawan?",
+    options: ["Puso", "Baga", "Atay", "Bato"],
+    answer: 0,
+    category: "agham"
+  },
+  {
+    question: "Ilang buto mayroon ang katawan ng isang nasa hustong gulang?",
+    options: ["106", "306", "406", "206"],
+    answer: 3,
+    category: "agham"
+  },
+  {
+    question: "Ano ang pinakamatigas na natural na materyal?",
+    options: ["Ginto", "Diamante", "Bakal", "Kuwarts"],
+    answer: 1,
+    category: "agham"
+  },
+  {
+    question: "Sa ilang digri Celsius kumukulo ang tubig sa karaniwang antas ng dagat?",
+    options: ["90", "100", "110", "120"],
+    answer: 1,
+    category: "agham"
+  },
+  {
+    question: "Ano ang 7 x 8?",
+    options: ["54", "58", "64", "56"],
+    answer: 3,
+    category: "math"
+  },
+  {
+    question: "Ano ang square root ng 144?",
+    options: ["12", "10", "11", "14"],
+    answer: 0,
+    category: "math"
+  },
+  {
+    question: "Ilang digri ang kabuuan ng mga anggulo sa loob ng isang tatsulok?",
+    options: ["90", "270", "180", "360"],
+    answer: 2,
+    category: "math"
+  },
+  {
+    question: "Ano ang pinakamaliit na prime number?",
+    options: ["0", "1", "3", "2"],
+    answer: 3,
+    category: "math"
+  },
+  {
+    question: "Sino ang nagpinta ng Mona Lisa?",
+    options: ["Michelangelo", "Leonardo da Vinci", "Raphael", "Vincent van Gogh"],
+    answer: 1,
+    category: "general"
+  },
+  {
+    question: "Aling wika ang may pinakamaraming katutubong nagsasalita sa mundo?",
+    options: ["Ingles", "Espanyol", "Mandarin", "Hindi"],
+    answer: 2,
+    category: "general"
+  },
+  {
+    question: "Ano ang pinakamalaking hayop na nakatira sa lupa?",
+    options: ["Elepante", "Rhino", "Hippo", "Giraffe"],
+    answer: 0,
+    category: "agham"
+  },
+  {
+    question: "Aling hayop ang mammal pero nangingitlog?",
+    options: ["Platypus", "Paniki", "Dolphin", "Kangaroo"],
+    answer: 0,
+    category: "agham"
+  },
+  {
+    question: "Ilang paa mayroon ang gagamba?",
+    options: ["6", "10", "8", "12"],
+    answer: 2,
+    category: "agham"
+  },
+  {
+    question: "Ano ang tawag sa batang palaka?",
+    options: ["Larva", "Tadpole", "Pupa", "Cub"],
+    answer: 1,
+    category: "agham"
+  },
+  {
+    question: "Aling ibon na hindi lumilipad ang pambansang sagisag ng New Zealand?",
+    options: ["Penguin", "Ostrich", "Emu", "Kiwi"],
+    answer: 3,
+    category: "agham"
+  },
+  {
+    question: "Aling bansa ang tinaguriang 'Land of the Rising Sun'?",
+    options: ["China", "Korea", "Japan", "Thailand"],
+    answer: 2,
+    category: "general"
+  },
+  {
+    question: "Saang lungsod matatagpuan ang Big Ben?",
+    options: ["London", "Paris", "Roma", "Berlin"],
+    answer: 0,
+    category: "general"
+  },
+  {
+    question: "Aling bansa ang may pinakamaraming populasyon sa mundo?",
+    options: ["Estados Unidos", "China", "Indonesia", "India"],
+    answer: 3,
+    category: "general"
+  },
+  {
+    question: "Saang bansa nagmula ang pizza?",
+    options: ["Greece", "Italy", "Spain", "France"],
+    answer: 1,
+    category: "general"
+  },
+  {
+    question: "Ano ang pangunahing sangkap ng tinapay?",
+    options: ["Bigas", "Harina", "Asukal", "Mais"],
+    answer: 1,
+    category: "general"
+  },
+  {
+    question: "Ilang manlalaro ng isang koponan ang sabay-sabay na nasa court sa basketball?",
+    options: ["4", "6", "7", "5"],
+    answer: 3,
+    category: "general"
+  },
+  {
+    question: "Ilang manlalaro ng isang koponan ang nasa court sa volleyball?",
+    options: ["6", "5", "7", "9"],
+    answer: 0,
+    category: "general"
+  },
+  {
+    question: "Sino ang boksingerong Pilipino na nanalo ng world titles sa walong dibisyon?",
+    options: ["Nonito Donaire", "Gerry Peñalosa", "Manny Pacquiao", "Flash Elorde"],
+    answer: 2,
+    category: "pilipinas"
+  },
+  {
+    question: "Anong taon nagsimula ang Ikalawang Digmaang Pandaigdig?",
+    options: ["1914", "1941", "1945", "1939"],
+    answer: 3,
+    category: "general"
+  },
+  {
+    question: "Ilang araw mayroon ang Pebrero sa leap year?",
+    options: ["28", "29", "30", "31"],
+    answer: 1,
+    category: "general"
+  },
+  {
+    question: "Anong taon ginanap ang EDSA People Power Revolution?",
+    options: ["1972", "1983", "1986", "1992"],
+    answer: 2,
+    category: "pilipinas"
+  },
+  {
+    question: "Anong kulay ang makukuha kapag pinaghalo ang asul at dilaw?",
+    options: ["Berde", "Lila", "Kahel", "Kayumanggi"],
+    answer: 0,
+    category: "general"
+  },
+  {
+    question: "Ilang kulay mayroon ang bahaghari?",
+    options: ["7", "5", "6", "8"],
+    answer: 0,
+    category: "general"
+  },
+  {
+    question: "Anong isport ang gumagamit ng shuttlecock?",
+    options: ["Tennis", "Squash", "Badminton", "Table tennis"],
+    answer: 2,
+    category: "general"
+  },
+  {
+    question: "Sino ang nagtatag ng Katipunan?",
+    options: ["Jose Rizal", "Andres Bonifacio", "Apolinario Mabini", "Emilio Aguinaldo"],
+    answer: 1,
+    category: "pilipinas"
+  },
+  {
+    question: "Ano ang pinakamalaking planeta sa Solar System?",
+    options: ["Saturn", "Neptune", "Jupiter", "Earth"],
+    answer: 2,
+    category: "agham"
+  },
+  {
+    question: "Ano ang pinakamalaking lawa sa Pilipinas?",
+    options: ["Laguna de Bay", "Lawa ng Taal", "Lawa ng Lanao", "Lawa ng Buhi"],
+    answer: 0,
+    category: "pilipinas"
+  },
+  {
+    question: "Ano ang pinakamahabang ilog sa Pilipinas?",
+    options: ["Ilog Pasig", "Ilog Pampanga", "Ilog Agusan", "Ilog Cagayan"],
+    answer: 3,
+    category: "pilipinas"
+  },
+  {
+    question: "Ilang gilid mayroon ang isang oktagon?",
+    options: ["6", "8", "10", "12"],
+    answer: 1,
+    category: "math"
+  }
+];
+
+let questions = [];
+
+function shufflequestions() {
+
+  for (let i = questions.length - 1; i > 0; i--) {
+
+    const index = Math.floor(Math.random() * (i + 1));
+    const hahawak = questions[i];
+    questions[i] = questions[index];
+    questions[index] = hahawak;
+  }
+}
+
+let currentquestion = 0;
+let score = 0;
+let answered = false;
+const timelimit = 15;
+let natitira = timelimit;
+let set = null;
+
+const timer = document.getElementById('timer');
+function starttimer() {
+
+clearInterval(set);
+natitira = timelimit;
+timer.textContent = `Time: ${natitira}`;
+set = setInterval(() => {
+
+natitira = natitira - 1;
+timer.textContent = `Time: ${natitira}`;
+
+if (natitira === 0) {
+  clearInterval(set);
+  timeout();
+}
+},1000);
+
+
+}
+
+function timeout() {
+
+if (answered === true)return;
+answered = true;
+next.disabled = false;
+const allow = document.querySelectorAll('.option');
+allow[questions[currentquestion].answer].classList.add('correct');
+
+feedback.classList.add('wrong');
+feedback.textContent = "Times Up!";
+
+}
+
+const questiontext = document.getElementById("question-text");
+const progressbar = document.getElementById("progress-bar");
+const number = document.getElementById("question-number");
+const options = document.getElementById("options");
+const feedback = document.getElementById("feedback");
+const next = document.getElementById("next-btn");
+function loadquestion() {
+
+ const tanong =  questions[currentquestion];
+  questiontext.textContent = tanong.question;
+  number.textContent = `Question ${currentquestion + 1} of ${questions.length}`;
+  progressbar.style.width = ((currentquestion) / questions.length) * 100 + "%";
+
+  if (currentquestion === questions.length - 1) {
+    next.textContent = "See Results";
+      } else {
+         next.textContent = "Next";
+      }
+
+  options.textContent = "";
+  tanong.options.forEach((option, index) => {
+
+    const button = document.createElement('button');
+    button.className = "option";
+    button.textContent = option;
+    
+    button.addEventListener('click', () => {
+
+      selectanswer(index);
+    })
+
+    options.appendChild(button);
+  })
+   feedback.textContent = "";
+   next.disabled = true;
+    answered = false;
+
+    starttimer();
+}
+
+const finalscore = document.getElementById('final-score');
+function selectanswer(selectedindex) {
+
+  if (answered === true)return;
+  answered = true;
+  clearInterval(set);
+ next.disabled = false;
+
+  const allowoption = document.querySelectorAll('.option');
+  const clickedbutton = allowoption[selectedindex];
+  const correctbutton = allowoption[questions[currentquestion].answer];
+
+  if (selectedindex === questions[currentquestion].answer) {
+     score++;
+    clickedbutton.classList.add('correct');
+    correctbutton.classList.add("correct");
+     finalscore.textContent = score;
+     scoredisplay.textContent = `Score: ${score}`;
+    feedback.className = "correct";
+    feedback.textContent = "Correct!";
+  } else {
+
+clickedbutton.classList.add("wrong");
+correctbutton.classList.add("correct");
+    feedback.className = "wrong";
+    feedback.textContent = "Wrong!";
+  }
+}
+
+next.addEventListener('click', () => {
+
+     currentquestion++;
+      if (currentquestion < questions.length) {
+        loadquestion();
+      } else {
+        showresults();
+      }
+})
+
+const result = document.getElementById('result-screen');
+const total = document.getElementById('total-questions');
+const message = document.getElementById('result-message');
+const quizscreen = document.getElementById('quiz-screen');
+function showresults() {
+
+  clearInterval(set);
+
+quizscreen.classList.add('hidden');
+result.classList.remove('hidden');
+
+  finalscore.textContent = score;
+  total.textContent = questions.length;
+
+  const percentage = (score / questions.length) * 100;
+
+  if (percentage >= 80) {
+    message.textContent = "Galing!";
+  } else if (percentage >= 50) {
+    message.textContent = "Not Bad!";
+  } else {
+    message.textContent = "Bawi Next Time!";
+  }
+
+  if (score > high) {
+  localStorage.setItem(ilalagay, score);
+  high = score;
+  pinakamataas.textContent = "New High Score";
+  } else {
+    pinakamataas.textContent = "";
+  }
+  highscore.textContent = high;
+
+  progressbar.style.width = "100%";
+}
+const restart = document.getElementById('restart-btn');
+const scoredisplay = document.getElementById('score-display');
+restart.addEventListener('click', () => {
+
+  currentquestion = 0;
+  score = 0;
+  scoredisplay.textContent = `Score: ${score}`;
+
+  result.classList.add('hidden');
+  categoryscreen.classList.remove('hidden');
+
+})
+
+let high = 0;
+const highscore = document.getElementById('high-score');
+const pinakamataas = document.getElementById('pinakamataas');
+
+let ilalagay = null;
+
+const categoryscreen = document.getElementById('category-screen');
+function startquiz(category) {
+
+ if (category === "all") {
+  questions = [...allquestions];
+ } else {
+  questions = allquestions.filter(question => question.category === category)
+ }
+
+ if (questions.length === 0){ 
+  
+  alert('Walang available na tanong sa category na ito.');
+  return
+ }
+
+ currentquestion = 0;
+ score = 0;
+ scoredisplay.textContent = `Score: ${score}`;
+
+ categoryscreen.classList.add('hidden');
+ quizscreen.classList.remove('hidden');
+
+ ilalagay = "highscore-" + category;
+ high = Number(localStorage.getItem(ilalagay));
+
+ shufflequestions();
+ loadquestion();
+}
+
+const categorybutton = document.querySelectorAll('.category-btn');
+categorybutton.forEach(button => {
+
+  button.addEventListener('click', () => {
+
+      startquiz(button.dataset.category);
+  })
+})
+
+  </script>
+
+  
+</body>
+</html>
