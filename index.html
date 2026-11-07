@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="C:\Sound\javascript roadmap\train.css">
   <title>Document</title>
 </head>
 <body>
@@ -571,6 +570,15 @@ body::after {
   outline-offset: 3px;
 }
 
+.option.selected {
+  background: #0c4a6e;
+  border-color: #38bdf8;
+}
+
+#submit-btn {
+  margin-bottom: 12px;
+}
+
 @media (max-width: 380px) {
   .category-list {
     grid-template-columns: 1fr;
@@ -632,6 +640,7 @@ body::after {
 
       <p id="feedback" class="feedback"></p><!--Tapos na-->
 
+      <button id="submit-btn" class="action-btn" disabled>Submit</button>
       <button id="next-btn" class="action-btn" disabled>Next</button><!--Tapos na-->
     </section>
 
@@ -1064,7 +1073,7 @@ function loadquestion() {
     
     button.addEventListener('click', () => {
 
-      selectanswer(index);
+      pumili(index);
     })
 
     options.appendChild(button);
@@ -1073,37 +1082,14 @@ function loadquestion() {
    next.disabled = true;
     answered = false;
 
+    selectedindex = null;
+    submit.disabled = true;
+
     starttimer();
 }
 
 const finalscore = document.getElementById('final-score');
-function selectanswer(selectedindex) {
 
-  if (answered === true)return;
-  answered = true;
-  clearInterval(set);
- next.disabled = false;
-
-  const allowoption = document.querySelectorAll('.option');
-  const clickedbutton = allowoption[selectedindex];
-  const correctbutton = allowoption[questions[currentquestion].answer];
-
-  if (selectedindex === questions[currentquestion].answer) {
-     score++;
-    clickedbutton.classList.add('correct');
-    correctbutton.classList.add("correct");
-     finalscore.textContent = score;
-     scoredisplay.textContent = `Score: ${score}`;
-    feedback.className = "correct";
-    feedback.textContent = "Correct!";
-  } else {
-
-clickedbutton.classList.add("wrong");
-correctbutton.classList.add("correct");
-    feedback.className = "wrong";
-    feedback.textContent = "Wrong!";
-  }
-}
 
 next.addEventListener('click', () => {
 
@@ -1205,6 +1191,61 @@ categorybutton.forEach(button => {
 
       startquiz(button.dataset.category);
   })
+})
+
+let selectedindex = null;
+
+const submit = document.getElementById('submit-btn');
+function pumili(index) {
+
+  if (answered === true)return;
+  selectedindex = index;
+
+  const mgaoption = document.querySelectorAll('.option');
+
+  mgaoption.forEach(button => {
+
+    button.classList.remove('selected');
+  })
+  mgaoption[index].classList.add('selected');
+  submit.disabled = false;
+}
+
+submit.addEventListener('click', () => {
+
+   if (answered === true)return;
+  answered = true;
+  clearInterval(set);
+ next.disabled = false;
+
+  const allowoption = document.querySelectorAll('.option');
+  const clickedbutton = allowoption[selectedindex];
+  const correctbutton = allowoption[questions[currentquestion].answer];
+
+   clickedbutton.classList.remove('selected');
+
+  if (selectedindex === questions[currentquestion].answer) {
+     score++;
+    clickedbutton.classList.add('correct');
+    correctbutton.classList.add("correct");
+     finalscore.textContent = score;
+     scoredisplay.textContent = `Score: ${score}`;
+    feedback.className = "correct";
+    feedback.textContent = "Correct!";
+  } else {
+
+clickedbutton.classList.add("wrong");
+correctbutton.classList.add("correct");
+    feedback.className = "wrong";
+    feedback.textContent = "Wrong!";
+  }
+
+  allowoption.forEach(button => {
+
+    button.disabled = true;
+  })
+  submit.disabled = true;
+
 })
 
   </script>
